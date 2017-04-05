@@ -1099,6 +1099,7 @@ struct __const_void_pointer<_Ptr, _Alloc, false>
 
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
+constexpr
 _Tp*
 __to_raw_pointer(_Tp* __p) _NOEXCEPT
 {
@@ -1107,6 +1108,7 @@ __to_raw_pointer(_Tp* __p) _NOEXCEPT
 
 template <class _Pointer>
 inline _LIBCPP_INLINE_VISIBILITY
+constexpr
 typename pointer_traits<_Pointer>::element_type*
 __to_raw_pointer(_Pointer __p) _NOEXCEPT
 {
@@ -1204,6 +1206,38 @@ struct __propagate_on_container_swap<_Alloc, true>
 {
     typedef typename _Alloc::propagate_on_container_swap type;
 };
+
+
+///////////////////////////////////////////////////
+
+template <class _Tp>
+struct __has_allocator_auto_cleanup
+{
+private:
+    struct __two {char __lx; char __lxx;};
+    template <class _Up> static __two __test(...);
+    template <class _Up> static char __test(typename _Up::allocator_auto_cleanup* = 0);
+public:
+    static const bool value = sizeof(__test<_Tp>(0)) == 1;
+};
+
+template <class _Alloc, bool = __has_allocator_auto_cleanup<_Alloc>::value>
+struct __allocator_auto_cleanup
+{
+    typedef false_type type;
+};
+
+template <class _Alloc>
+struct __allocator_auto_cleanup<_Alloc, true>
+{
+    typedef typename _Alloc::allocator_auto_cleanup type;
+};
+
+
+
+//////////////////////////////////////////////////
+
+
 
 template <class _Tp>
 struct __has_is_always_equal
@@ -1507,6 +1541,10 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
                      propagate_on_container_move_assignment;
     typedef typename __propagate_on_container_swap<allocator_type>::type
                      propagate_on_container_swap;
+
+    typedef typename __allocator_auto_cleanup<allocator_type>::type
+                     allocator_auto_cleanup;
+
     typedef typename __is_always_equal<allocator_type>::type
                      is_always_equal;
 
@@ -1522,21 +1560,21 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
 #endif  // _LIBCPP_CXX03_LANG
 
     _LIBCPP_INLINE_VISIBILITY
-    static pointer allocate(allocator_type& __a, size_type __n)
+    constexpr static pointer allocate(allocator_type& __a, size_type __n)
         {return __a.allocate(__n);}
     _LIBCPP_INLINE_VISIBILITY
-    static pointer allocate(allocator_type& __a, size_type __n, const_void_pointer __hint)
+    constexpr static pointer allocate(allocator_type& __a, size_type __n, const_void_pointer __hint)
         {return allocate(__a, __n, __hint,
             __has_allocate_hint<allocator_type, size_type, const_void_pointer>());}
 
     _LIBCPP_INLINE_VISIBILITY
-    static void deallocate(allocator_type& __a, pointer __p, size_type __n) _NOEXCEPT
+    constexpr static void deallocate(allocator_type& __a, pointer __p, size_type __n) _NOEXCEPT
         {__a.deallocate(__p, __n);}
 
 #ifndef _LIBCPP_HAS_NO_VARIADICS
     template <class _Tp, class... _Args>
         _LIBCPP_INLINE_VISIBILITY
-        static void construct(allocator_type& __a, _Tp* __p, _Args&&... __args)
+        constexpr static void construct(allocator_type& __a, _Tp* __p, _Args&&... __args)
             {__construct(__has_construct<allocator_type, _Tp*, _Args...>(),
                          __a, __p, _VSTD::forward<_Args>(__args)...);}
 #else  // _LIBCPP_HAS_NO_VARIADICS
@@ -1570,14 +1608,15 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
 
     template <class _Tp>
         _LIBCPP_INLINE_VISIBILITY
-        static void destroy(allocator_type& __a, _Tp* __p)
+        constexpr static void destroy(allocator_type& __a, _Tp* __p)
             {__destroy(__has_destroy<allocator_type, _Tp*>(), __a, __p);}
 
     _LIBCPP_INLINE_VISIBILITY
-    static size_type max_size(const allocator_type& __a) _NOEXCEPT
+    constexpr static size_type max_size(const allocator_type& __a) _NOEXCEPT
         {return __max_size(__has_max_size<const allocator_type>(), __a);}
 
     _LIBCPP_INLINE_VISIBILITY
+    constexpr
     static allocator_type
         select_on_container_copy_construction(const allocator_type& __a)
             {return select_on_container_copy_construction(
@@ -1616,6 +1655,7 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
 
     template <class _Iter, class _Ptr>
         _LIBCPP_INLINE_VISIBILITY
+        constexpr
         static
         void
         __construct_range_forward(allocator_type& __a, _Iter __begin1, _Iter __end1, _Ptr& __begin2)
@@ -1647,6 +1687,7 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
 
     template <class _Ptr>
         _LIBCPP_INLINE_VISIBILITY
+        constexpr
         static
         void
         __construct_backward(allocator_type& __a, _Ptr __begin1, _Ptr __end1, _Ptr& __end2)
@@ -1660,6 +1701,7 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
 
     template <class _Tp>
         _LIBCPP_INLINE_VISIBILITY
+        constexpr
         static
         typename enable_if
         <
@@ -1679,17 +1721,18 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
 private:
 
     _LIBCPP_INLINE_VISIBILITY
-    static pointer allocate(allocator_type& __a, size_type __n,
+    constexpr static pointer allocate(allocator_type& __a, size_type __n,
         const_void_pointer __hint, true_type)
         {return __a.allocate(__n, __hint);}
     _LIBCPP_INLINE_VISIBILITY
-    static pointer allocate(allocator_type& __a, size_type __n,
+    constexpr static pointer allocate(allocator_type& __a, size_type __n,
         const_void_pointer, false_type)
         {return __a.allocate(__n);}
 
 #ifndef _LIBCPP_HAS_NO_VARIADICS
     template <class _Tp, class... _Args>
         _LIBCPP_INLINE_VISIBILITY
+        constexpr
         static void __construct(true_type, allocator_type& __a, _Tp* __p, _Args&&... __args)
             {__a.construct(__p, _VSTD::forward<_Args>(__args)...);}
     template <class _Tp, class... _Args>
@@ -1702,6 +1745,7 @@ private:
 
     template <class _Tp>
         _LIBCPP_INLINE_VISIBILITY
+        constexpr
         static void __destroy(true_type, allocator_type& __a, _Tp* __p)
             {__a.destroy(__p);}
     template <class _Tp>
@@ -1712,17 +1756,21 @@ private:
             }
 
     _LIBCPP_INLINE_VISIBILITY
+    constexpr
     static size_type __max_size(true_type, const allocator_type& __a)
             {return __a.max_size();}
     _LIBCPP_INLINE_VISIBILITY
+    constexpr
     static size_type __max_size(false_type, const allocator_type&)
             {return numeric_limits<size_type>::max() / sizeof(value_type);}
 
     _LIBCPP_INLINE_VISIBILITY
+    constexpr
     static allocator_type
         select_on_container_copy_construction(true_type, const allocator_type& __a)
             {return __a.select_on_container_copy_construction();}
     _LIBCPP_INLINE_VISIBILITY
+    constexpr
     static allocator_type
         select_on_container_copy_construction(false_type, const allocator_type& __a)
             {return __a;}

@@ -262,6 +262,7 @@ swap_ranges(_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardItera
 // forward declared in <type_traits>
 template<class _Tp, size_t _Np>
 inline _LIBCPP_INLINE_VISIBILITY
+constexpr
 typename enable_if<
     __is_swappable<_Tp>::value
 >::type
@@ -526,6 +527,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
 #endif
 
     _LIBCPP_INLINE_VISIBILITY
+    constexpr
     void
     swap(pair& __p) _NOEXCEPT_(__is_nothrow_swappable<first_type>::value &&
                                __is_nothrow_swappable<second_type>::value)

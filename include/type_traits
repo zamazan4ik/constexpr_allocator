@@ -4410,6 +4410,7 @@ template <class _Tp> struct __is_nothrow_swappable;
 
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
+constexpr
 #ifndef _LIBCPP_CXX03_LANG
 typename enable_if
 <
@@ -4429,6 +4430,7 @@ swap(_Tp& __x, _Tp& __y) _NOEXCEPT_(is_nothrow_move_constructible<_Tp>::value &&
 
 template<class _Tp, size_t _Np>
 inline _LIBCPP_INLINE_VISIBILITY
+constexpr
 typename enable_if<
     __is_swappable<_Tp>::value
 >::type
