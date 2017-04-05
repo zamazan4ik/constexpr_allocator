@@ -268,12 +268,13 @@ void swap(vector<T,Allocator>& x, vector<T,Allocator>& y)
 #include <climits>
 #include <limits>
 #include <initializer_list>
-#include <memory>
+#include <modif_memory>
 #include <stdexcept>
 #include <algorithm>
 #include <cstring>
-#include <__split_buffer>
+#include <modif___split_buffer>
 #include <__functional_base>
+#include <modif_new_destroyer>
 
 #include <__undef_min_max>
 
@@ -289,7 +290,7 @@ template <bool>
 class __vector_base_common
 {
 protected:
-    _LIBCPP_ALWAYS_INLINE __vector_base_common() {}
+    _LIBCPP_ALWAYS_INLINE constexpr __vector_base_common() {}
     _LIBCPP_NORETURN constexpr void __throw_length_error() const;
     _LIBCPP_NORETURN constexpr void __throw_out_of_range() const;
 };
@@ -314,7 +315,7 @@ __vector_base_common<__b>::__throw_out_of_range() const
 #pragma warning( push )
 #pragma warning( disable: 4231 )
 #endif // _LIBCPP_MSVC
-_LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __vector_base_common<true>)
+//_LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __vector_base_common<true>)
 #ifdef _LIBCPP_MSVC
 #pragma warning( pop )
 #endif // _LIBCPP_MSVC
@@ -322,6 +323,8 @@ _LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __vector_base_com
 template <class _Tp, class _Allocator>
 class __vector_base
     : protected __vector_base_common<true>
+        , _Allocator
+        , __destroyer_base<__vector_base<_Tp, _Allocator> , allocator_traits<_Allocator>::allocator_auto_cleanup::value >
 {
 protected:
     typedef _Tp                                      value_type;
@@ -338,24 +341,24 @@ protected:
 
     pointer                                         __begin_;
     pointer                                         __end_;
-    __compressed_pair<pointer, allocator_type> __end_cap_;
+    pointer __end_cap_;
 
     _LIBCPP_INLINE_VISIBILITY
     constexpr
     allocator_type& __alloc() _NOEXCEPT
-        {return __end_cap_.second();}
-    _LIBCPP_ILINE_VISIBILITY
+        {return *this;}
+    _LIBCPP_INLINE_VISIBILITY
     constexpr
     const allocator_type& __alloc() const _NOEXCEPT
-        {return __end_cap_.second();}
+        {return *this;}
     _LIBCPP_INLINE_VISIBILITY
     constexpr
     pointer& __end_cap() _NOEXCEPT
-        {return __end_cap_.first();}
+        {return __end_cap_;}
     _LIBCPP_INLINE_VISIBILITY
     constexpr
     const pointer& __end_cap() const _NOEXCEPT
-        {return __end_cap_.first();}
+        {return __end_cap_;}
 
     _LIBCPP_INLINE_VISIBILITY
     constexpr
@@ -363,7 +366,8 @@ protected:
         _NOEXCEPT_(is_nothrow_default_constructible<allocator_type>::value);
 	constexpr
     _LIBCPP_INLINE_VISIBILITY __vector_base(const allocator_type& __a);
-    ~__vector_base();
+
+    void __destroy() _NOEXCEPT;
 
     _LIBCPP_INLINE_VISIBILITY
     constexpr
@@ -451,14 +455,14 @@ template <class _Tp, class _Allocator>
 constexpr
 inline _LIBCPP_INLINE_VISIBILITY
 __vector_base<_Tp, _Allocator>::__vector_base(const allocator_type& __a)
-    : __begin_(nullptr),
+    : _Allocator(__a), __begin_(nullptr),
       __end_(nullptr),
-      __end_cap_(nullptr, __a)
+      __end_cap_(nullptr)
 {
 }
 
 template <class _Tp, class _Allocator>
-__vector_base<_Tp, _Allocator>::~__vector_base()
+void __vector_base<_Tp, _Allocator>::__destroy() _NOEXCEPT
 {
     if (__begin_ != nullptr)
     {
@@ -826,6 +830,7 @@ private:
     constexpr _LIBCPP_INLINE_VISIBILITY
     void __construct_at_end(size_type __n, const_reference __x);
     template <class _ForwardIterator>
+        constexpr
         typename enable_if
         <
             __is_forward_iterator<_ForwardIterator>::value,
@@ -936,8 +941,9 @@ constexpr
 #else
     struct __RAII_IncreaseAnnotator {
       _LIBCPP_INLINE_VISIBILITY
+      constexpr
       __RAII_IncreaseAnnotator(const vector &, size_type = 1) {}
-      _LIBCPP_INLINE_VISIBILITY void __done() {}
+      _LIBCPP_INLINE_VISIBILITY constexpr void __done() {}
     };
 #endif
 
@@ -1679,7 +1685,8 @@ vector<_Tp, _Allocator>::__push_back_slow_path(_Up& __x)
     allocator_type& __a = this->__alloc();
     __split_buffer<value_type, allocator_type&> __v(__recommend(size() + 1), size(), __a);
     // __v.push_back(_VSTD::forward<_Up>(__x));
-    __alloc_traits::construct(__a, _VSTD::__to_raw_pointer(__v.__end_), _VSTD::forward<_Up>(__x));
+    auto __p = _VSTD::__to_raw_pointer(__v.__end_);
+    __alloc_traits::construct(__a, __p, _VSTD::forward<_Up>(__x));
     __v.__end_++;
     __swap_out_circular_buffer(__v);
 }
@@ -2348,7 +2355,7 @@ public:
 #else
         _NOEXCEPT;
 #endif
-    ~vector();
+    //~vector();
     constexpr explicit vector(size_type __n);
 #if _LIBCPP_STD_VER > 11
     constexpr explicit vector(size_type __n, const allocator_type& __a);
@@ -2422,7 +2429,7 @@ public:
         >::type
         assign(_ForwardIterator __first, _ForwardIterator __last);
 
-    void assign(size_type __n, const value_type& __x);
+    constexpr void assign(size_type __n, const value_type& __x);
 #ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
     _LIBCPP_INLINE_VISIBILITY
     constexpr
@@ -2984,22 +2991,22 @@ vector<bool, _Allocator>::vector(initializer_list<value_type> __il, const alloca
 }
 
 #endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
-
+/*
 template <class _Allocator>
-constexpr
 vector<bool, _Allocator>::~vector()
 {
     if (__begin_ != nullptr)
         __storage_traits::deallocate(__alloc(), __begin_, __cap());
     __invalidate_all_iterators();
-}
+}*/
 
 template <class _Allocator>
 constexpr
 vector<bool, _Allocator>::vector(const vector& __v)
-    : __begin_(nullptr),
+    : _Allocator(__storage_traits::select_on_container_copy_construction(__v.__alloc())),
+      __begin_(nullptr),
       __size_(0),
-      __cap_alloc_(0, __storage_traits::select_on_container_copy_construction(__v.__alloc()))
+      __cap_alloc_(0)
 {
     if (__v.size() > 0)
     {

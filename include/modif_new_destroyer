@@ -1,0 +1,28 @@
+// -*- C++ -*-
+//===------------------------------ vector --------------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is dual licensed under the MIT and the University of Illinois Open
+// Source Licenses. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBCPP_DESTROYER
+#define _LIBCPP_DESTROYER
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+template <class _Derived, bool _CallDestroy>
+struct __destroyer_base {};
+
+template <class _Derived>
+struct __destroyer_base<_Derived, true> {
+    ~__destroyer_base() {
+        static_cast<_Derived>(*this).__destroy();
+    }
+};
+
+_LIBCPP_END_NAMESPACE_STD
+
+#endif  // _LIBCPP_DESTROYER
